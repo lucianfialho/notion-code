@@ -2,63 +2,78 @@
 
 ## What I Built
 
-**notion-code** — Claude Code for Notion.
+**notion-architect** — describe your business, get a complete Notion workspace.
 
-An interactive CLI where you manage your entire Notion workspace through natural language, right from your terminal. Think of it as Claude Code, but instead of your codebase, your environment is your Notion workspace.
+A CLI tool that takes a plain-text business description and creates a fully structured Notion workspace in seconds — databases with rich schemas, pages with real content, SOPs, templates, sample data, and a dashboard linking everything together.
 
 ```
-notion-code> create a project tracker with Name, Status, Priority, and Due Date
-[Creating database "Project Tracker"...]
-Done!
+$ notion-architect "saas startup building a CRM"
 
-notion-code> show me everything due this week
-[Searching workspace...]
-Found 5 items due this week across 2 databases...
+  ✔ 🚀 CRM Startup — Home (page)
+  ✔ 🗺️ Product Roadmap (database)
+  ✔ 🏃 Sprint Board (database)
+  ✔ 💡 Feature Requests (database)
+  ✔ 🐛 Bug Tracker (database)
+  ✔ 🎯 OKRs (database)
+  ✔ 👥 Hiring Pipeline (database)
+  ✔ 💰 Investor Tracker (database)
+  ✔ 📋 Release Notes (page)
+  ✔ 📝 Meeting Notes (page)
+
+  ✨ Workspace ready! 10 items created.
 ```
 
-You can search, read, create, edit, organize, and comment on anything in your Notion workspace — all through conversation. The AI agent understands context, chains multiple operations, and remembers what you asked previously.
+The tool detects your industry (SaaS, agency, e-commerce, freelancer, restaurant, etc.), plans the right workspace structure, and creates everything via the Notion API — all in one command. It even adapts to the user's language: describe your business in Portuguese, get a Portuguese workspace.
 
-### Key features:
-- **Interactive REPL** — multi-turn conversations with your workspace
-- **Single prompt mode** — `notion-code -p "query"` for scripts and pipelines
-- **Workspace awareness** — indexes your databases and pages for smarter responses
-- **OAuth authentication** — secure browser-based login flow
-- **Full CRUD** — search, create pages, create databases, edit, move, comment
+### What makes it different
 
-## Video Demo
+This isn't a template gallery or a generic AI chat. notion-architect is a **specialized agent** that:
 
-<!-- TODO: Record with terminalizer and upload -->
+- **Understands business context** — "marketing agency with 5 clients" produces a completely different workspace than "SaaS startup building a CRM"
+- **Creates production-ready structures** — databases have proper property types (select, multi-select, date, person, relations), pre-populated with industry-relevant options
+- **Fills the workspace with content** — sample data, SOPs with real instructions, templates, and a Home dashboard connecting everything
+- **Shows progress in real-time** — clickable Notion links appear as each item is created
+
+## Demo
+
+<!-- TODO: Add demo video/gif -->
 
 ## Show us the code
 
-<!-- TODO: Add GitHub repo URL after push -->
+**GitHub**: [github.com/lucianfialho/notion-code](https://github.com/lucianfialho/notion-code)
+
+Key files:
+- [`src/agent.ts`](https://github.com/lucianfialho/notion-code/blob/main/src/agent.ts) — Agent SDK integration with Notion MCP
+- [`src/system-prompt.ts`](https://github.com/lucianfialho/notion-code/blob/main/src/system-prompt.ts) — Workspace architecture prompt
+- [`src/index.ts`](https://github.com/lucianfialho/notion-code/blob/main/src/index.ts) — CLI with interactive mode and progress display
 
 ## How I Used Notion MCP
 
-Notion MCP is the **entire tool layer** of notion-code. The architecture is:
+Notion MCP is the **entire execution layer** of notion-architect. The architecture:
 
 ```
-User (terminal) → Claude Agent SDK → Notion MCP Server → Notion API
+Business description → Claude Agent SDK → Notion MCP Server → Notion API
 ```
 
-The CLI uses the **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) to create an AI agent, and connects the official **Notion MCP server** (`@notionhq/notion-mcp-server`) as its tool provider via stdio.
+The CLI uses the **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`) to create an AI agent with a specialized system prompt for workspace architecture. The official **Notion MCP server** (`@notionhq/notion-mcp-server`) is connected as the tool provider via stdio.
 
-When you type something like "create a sprint board for next week", here's what happens:
+When you run `notion-architect "marketing agency with 5 clients"`:
 
-1. Your input goes to the Claude Agent SDK
-2. Claude interprets the intent and decides to call `notion-search` (to check for existing boards), then `notion-create-pages` (to create the database and entries)
-3. Each tool call goes through the Notion MCP server, which translates it to Notion API calls
-4. Results flow back through the agent loop
-5. Claude summarizes what happened and streams the response to your terminal
+1. The agent receives the description + system prompt with workspace architecture rules
+2. It plans the workspace structure based on the industry (agency → client tracker, project pipeline, content calendar, etc.)
+3. It creates a Home page first, then creates each database and sub-page as children using MCP tools
+4. For each database, it defines the schema (property types, select options) and adds sample entries
+5. It creates SOP pages with real, useful content
+6. Each created item is reported back with its Notion URL for real-time progress display
 
-The MCP tools used include:
-- `notion-search` — semantic search across the workspace
-- `notion-fetch` — read pages, databases, data sources
-- `notion-create-pages` — create pages with content and properties
-- `notion-create-database` — create databases with schemas
-- `notion-update-page` — edit content, properties
-- `notion-move-pages` — reorganize content
-- `notion-create-comment` — add comments to pages
-- `notion-get-users` / `notion-get-teams` — workspace members
+The Notion MCP tools used:
+- **`notion-search`** — find existing pages to understand workspace context
+- **`notion-create-pages`** — create pages with content and properties, create database entries with sample data
+- **`notion-create-database`** — create databases with full schemas (select options, property types, relations)
+- **`notion-update-page`** — update page content with rich Notion-flavored Markdown
 
-What makes this different from other Notion CLIs: those are API wrappers with structured commands. notion-code is an **AI agent** — it reasons about your request, decides which MCP tools to call (and in what order), handles errors, and maintains conversation context. The Notion MCP server gives it the full power of the Notion API without any custom API code.
+The agent makes 15-25 MCP tool calls per workspace, creating a complete, interconnected structure that would take a human 30-60 minutes to set up manually.
+
+### OAuth Integration
+
+notion-architect implements the full Notion OAuth 2.0 flow — users authenticate via browser, the CLI receives the token via a local callback server, and credentials are stored securely at `~/.notion-code/credentials.json`. This means the tool works with any Notion workspace without requiring users to manually create API tokens.

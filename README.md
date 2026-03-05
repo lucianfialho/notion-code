@@ -1,35 +1,52 @@
-# notion-code
+# notion-architect
 
-**Claude Code for Notion** — manage your entire Notion workspace from the terminal using natural language.
+**Describe your business. Get a complete Notion workspace.**
 
-Like Claude Code talks to your codebase, notion-code talks to your Notion workspace.
+One command turns a business description into a fully structured Notion workspace — databases, pages, SOPs, templates, and sample data — all wired together and ready to use.
 
 ```
-notion-code> create a project tracker with Name, Status, Priority, and Due Date
-[Creating database "Project Tracker"...]
-Done! Created database with 4 properties.
+$ notion-architect "marketing agency with 5 clients"
 
-notion-code> add three sample tasks to it
-[Creating pages in "Project Tracker"...]
-Created 3 tasks: "Setup CI/CD", "Design review", "Write documentation"
+  🏗️  notion-architect v0.1.0
+  Describe your business. Get a workspace.
 
-notion-code> show me everything due this week
-[Searching workspace...]
-Found 5 items due this week across 2 databases...
+  Workspace: Personal
+
+  ✔ 🚀 Agency HQ — Marketing Agency (page)
+    → https://notion.so/abc123
+  ✔ 👥 Client Tracker (database)
+    → https://notion.so/def456
+  ✔ 🗂️ Project Pipeline (database)
+    → https://notion.so/ghi789
+  ✔ 📅 Content Calendar (database)
+    → https://notion.so/jkl012
+  ✔ 🧾 Invoice Log (database)
+    → https://notion.so/mno345
+  ✔ 📝 Meeting Notes (page)
+    → https://notion.so/pqr678
+
+  ✨ Workspace ready! 6 items created.
+
+  Open in Notion: https://notion.so/abc123
 ```
 
 ## How it works
 
-notion-code uses the **Claude Agent SDK** as its AI engine and **Notion MCP** as the tool layer. You type in natural language, Claude decides which Notion operations to perform, and executes them through the MCP protocol.
+```
+You (describe business) → Claude Agent SDK → Notion MCP Server → Notion API
+```
 
-```
-You (terminal) → Claude Agent SDK → Notion MCP Server → Notion API
-```
+1. You describe your business, project, or team in plain text
+2. An AI agent analyzes your description and plans the ideal workspace structure
+3. The agent creates everything in Notion via the official MCP server
+4. You get a complete, ready-to-use workspace with clickable links
+
+The agent adapts to your industry — SaaS, agency, e-commerce, freelancer, restaurant, startup, and more. It creates databases with proper property types, pre-populated select options, sample data, SOPs with real content, and a Home dashboard linking everything together.
 
 ## Install
 
 ```bash
-npm install -g notion-code
+npm install -g notion-architect
 ```
 
 ## Requirements
@@ -40,96 +57,95 @@ npm install -g notion-code
 
 ## Quick Start
 
-### Option 1: OAuth (recommended)
+### 1. Set up Notion integration
+
+Create an OAuth integration at [notion.so/my-integrations](https://www.notion.so/my-integrations), then:
 
 ```bash
-# Set up your Notion integration credentials
+# Create a .env file in the project directory, or export:
 export NOTION_CLIENT_ID=your_client_id
 export NOTION_CLIENT_SECRET=your_client_secret
-
-# Authenticate
-notion-code auth login
 ```
 
-### Option 2: Direct token (for internal integrations)
+### 2. Authenticate
 
 ```bash
-export NOTION_TOKEN=ntn_your_integration_token
+notion-architect auth login
 ```
 
-Then start using it:
+This opens your browser for OAuth authorization. Select the workspace you want to use.
+
+### 3. Build a workspace
 
 ```bash
+# With args
+notion-architect "saas startup building a CRM"
+
 # Interactive mode
-notion-code
-
-# Single command
-notion-code -p "list all databases in my workspace"
-
-# JSON output (for scripting)
-notion-code -p "find pages about marketing" --output-format json
+notion-architect
 ```
 
 ## Usage
 
-### Interactive mode
+### Interactive mode (no args)
+
+```
+$ notion-architect
+
+  🏗️  notion-architect v0.1.0
+  Describe your business. Get a workspace.
+
+  Examples:
+    "marketing agency with 5 clients"
+    "saas startup building a CRM"
+    "freelance designer tracking projects"
+    "restaurante com 3 unidades"
+
+  Describe your business: _
+```
+
+### Direct mode
 
 ```bash
-notion-code
-```
-
-Opens a REPL where you can have a conversation with your Notion workspace:
-
-```
-notion-code> find all pages about Q1 planning
-notion-code> summarize the Engineering Roadmap database
-notion-code> create a meeting notes page for today
-notion-code> update the status of "Auth Redesign" to Done
-notion-code> move all archived pages to a 2024 folder
-```
-
-### Single prompt mode
-
-```bash
-notion-code -p "how many tasks are overdue?"
-notion-code -p "create a sprint board for next week" --output-format json
+notion-architect "freelance designer tracking projects"
+notion-architect "restaurante com 3 unidades"
+notion-architect "e-commerce store selling electronics"
 ```
 
 ### Auth management
 
 ```bash
-notion-code auth login    # OAuth flow
-notion-code auth logout   # Clear credentials
-notion-code auth status   # Show connection info
+notion-architect auth login    # OAuth flow (opens browser)
+notion-architect auth logout   # Clear stored credentials
+notion-architect auth status   # Show connection info
 ```
 
-## What you can do
+## What gets created
 
-| Action | Example |
-|--------|---------|
-| **Search** | "find all pages about marketing" |
-| **Read** | "what's in the Engineering Roadmap database?" |
-| **Create** | "create a project tracker with Name, Status, Priority" |
-| **Edit** | "update the status of Auth Redesign to Done" |
-| **Organize** | "move archived pages to a 2024 folder" |
-| **Comment** | "add a comment on Q1 Review saying approved" |
+The agent adapts the workspace to your industry:
 
-## How is this different from other Notion CLIs?
+| Industry | What you get |
+|----------|-------------|
+| **Agency** | Client tracker, Project pipeline, Content calendar, Invoicing, Meeting notes |
+| **SaaS** | Product roadmap, Bug tracker, Sprint board, Feature requests, Release notes |
+| **E-commerce** | Product catalog, Order tracker, Inventory, Supplier contacts |
+| **Freelancer** | Client CRM, Project tracker, Invoice log, Time tracking, Portfolio |
+| **Startup** | OKRs, Sprint board, Hiring pipeline, Investor tracker |
+| **Restaurant** | Menu database, Inventory, Staff schedule, Supplier contacts, Recipe book |
 
-Existing Notion CLIs are API wrappers — structured commands for structured operations. notion-code is an **AI agent** that understands natural language, maintains conversation context, and can chain multiple operations to accomplish complex tasks.
-
-| | Traditional CLI | notion-code |
-|---|---|---|
-| Input | `notion-cli page create --title "X"` | "create a page about the new project" |
-| Multi-step | One command = one action | "reorganize my workspace by quarter" |
-| Context | Stateless | Remembers conversation |
-| AI | None | Claude as reasoning engine |
+Every workspace includes:
+- A **Home/Dashboard** page linking everything
+- Databases with **rich property types** (select, multi-select, date, person, relations)
+- **Pre-populated options** relevant to your industry
+- **Sample data** (2-3 entries per database) so the workspace feels alive
+- **SOPs and templates** with real, useful content
+- Content in **your language** (write in Portuguese, get Portuguese workspace)
 
 ## Built with
 
 - [Claude Agent SDK](https://docs.anthropic.com/en/docs/claude-code/sdk) — AI agent loop
-- [Notion MCP](https://github.com/notionhq/notion-mcp-server) — Notion API via Model Context Protocol
-- TypeScript
+- [Notion MCP Server](https://github.com/notionhq/notion-mcp-server) — Notion API via Model Context Protocol
+- TypeScript, Commander.js, Ora, Ink
 
 ## License
 
