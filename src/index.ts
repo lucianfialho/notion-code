@@ -4,19 +4,47 @@ import chalk from "chalk";
 import { parseArgs } from "./cli/args.js";
 import { runOAuthFlow, getToken } from "./auth/oauth.js";
 import { getCredentials, deleteCredentials } from "./auth/store.js";
-import { runSinglePrompt } from "./cli/single.js";
-import { runInteractiveMode } from "./cli/interactive.js";
+import { getCachedContext, indexWorkspace } from "./context/workspace.js";
+import { launchInteractive, runPrompt } from "./agent.js";
 
 const args = parseArgs(process.argv);
 
 switch (args.command) {
-  case "interactive":
-    await runInteractiveMode();
-    break;
+  case "interactive": {
+    const token = await getToken();
+    const creds = await getCredentials();
 
-  case "prompt":
-    await runSinglePrompt(args.prompt!, args.outputFormat);
+    let context = await getCachedContext();
+    if (!context && creds) {
+      try {
+        context = await indexWorkspace(token, creds.workspace_name);
+      } catch {
+        // Non-fatal
+      }
+    }
+
+    launchInteractive({
+      token,
+      workspaceName: creds?.workspace_name,
+      workspaceContext: context ?? undefined,
+    });
     break;
+  }
+
+  case "prompt": {
+    const token = await getToken();
+    const creds = await getCredentials();
+    const context = await getCachedContext();
+
+    runPrompt({
+      token,
+      workspaceName: creds?.workspace_name,
+      workspaceContext: context ?? undefined,
+      prompt: args.prompt!,
+      outputFormat: args.outputFormat,
+    });
+    break;
+  }
 
   case "auth-login": {
     const creds = await runOAuthFlow();
