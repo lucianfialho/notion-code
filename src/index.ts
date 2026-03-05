@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
 import chalk from "chalk";
 import ora from "ora";
+import * as readline from "node:readline/promises";
+import { stdin, stdout } from "node:process";
 import { Command } from "commander";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -25,6 +28,11 @@ function printBanner() {
   console.log(chalk.dim("  Describe your business. Get a workspace.\n"));
 }
 
+function link(text: string, url: string): string {
+  // OSC 8 hyperlink: clickable in modern terminals (iTerm2, Warp, Ghostty, etc.)
+  return `\u001b]8;;${url}\u0007${text}\u001b]8;;\u0007`;
+}
+
 function printResult(items: CreatedItem[]) {
   console.log("");
   console.log(chalk.bold.green(`  ✨ Workspace ready! ${items.length} items created.\n`));
@@ -34,11 +42,14 @@ function printResult(items: CreatedItem[]) {
     const icon = ICONS[item.type];
     const title = item.title.padEnd(maxTitle);
     const type = chalk.dim(`(${item.type})`);
-    console.log(`  ${icon} ${chalk.bold(title)} ${type}`);
+    const clickable = item.url ? link(chalk.bold(title), item.url) : chalk.bold(title);
+    console.log(`  ${icon} ${clickable} ${type}`);
   }
 
   console.log("");
-  console.log(chalk.dim("  Open your Notion workspace to see the results."));
+  if (items.length > 0 && items[0].url) {
+    console.log(chalk.dim("  Open in Notion: ") + link(chalk.cyan(items[0].url), items[0].url));
+  }
   console.log("");
 }
 
@@ -52,58 +63,84 @@ const program = new Command()
 
     if (!description) {
       printBanner();
-      console.log(chalk.yellow("  Usage: notion-architect <description>\n"));
+      // Interactive mode — ask the user
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+
       console.log(chalk.dim("  Examples:"));
-      console.log(chalk.dim('    notion-architect "marketing agency with 5 clients"'));
-      console.log(chalk.dim('    notion-architect "saas startup building a CRM"'));
-      console.log(chalk.dim('    notion-architect "freelance designer tracking projects"'));
-      console.log(chalk.dim('    notion-architect "restaurante com 3 unidades"\n'));
-      return;
+      console.log(chalk.dim('    "marketing agency with 5 clients"'));
+      console.log(chalk.dim('    "saas startup building a CRM"'));
+      console.log(chalk.dim('    "freelance designer tracking projects"'));
+      console.log(chalk.dim('    "restaurante com 3 unidades"\n'));
+
+      const answer = await rl.question(chalk.bold.cyan("  Describe your business: "));
+      rl.close();
+
+      if (!answer.trim()) {
+        console.log(chalk.dim("\n  Nothing to build. Bye!\n"));
+        return;
+      }
+
+      return runBuild(answer.trim());
     }
 
     printBanner();
-
-    const token = await getToken();
-    const creds = await getCredentials();
-
-    if (creds) {
-      console.log(chalk.dim(`  Workspace: ${creds.workspace_name}\n`));
-    }
-
-    const spinner = ora({
-      text: "Analyzing your business...",
-      prefixText: " ",
-    }).start();
-
-    const items: CreatedItem[] = [];
-    let lastPhase = "";
-
-    try {
-      const result = await buildWorkspace({
-        token,
-        description,
-        onItemCreated: (item) => {
-          items.push(item);
-          spinner.succeed(chalk.bold(item.title) + chalk.dim(` (${item.type})`));
-          spinner.start("Creating next item...");
-        },
-        onThinking: (text) => {
-          // Update spinner with what the agent is doing
-          const short = text.length > 60 ? text.slice(0, 57) + "..." : text;
-          if (short !== lastPhase) {
-            spinner.text = short;
-            lastPhase = short;
-          }
-        },
-      });
-
-      spinner.stop();
-      printResult(items.length > 0 ? items : result);
-    } catch (err) {
-      spinner.fail(chalk.red(`Error: ${(err as Error).message}`));
-      process.exit(1);
-    }
+    return runBuild(description);
   });
+
+async function runBuild(description: string) {
+  const token = await getToken();
+  const creds = await getCredentials();
+
+  if (creds) {
+    console.log(chalk.dim(`  Workspace: ${creds.workspace_name}\n`));
+  }
+
+  const spinner = ora({
+    text: "Analyzing your business...",
+    prefixText: " ",
+  }).start();
+
+  const items: CreatedItem[] = [];
+  let lastPhase = "";
+  let agentOutput = "";
+
+  try {
+    const result = await buildWorkspace({
+      token,
+      description,
+      onItemCreated: (item) => {
+        items.push(item);
+        spinner.succeed(
+          chalk.bold(item.title) +
+          chalk.dim(` (${item.type})`) +
+          (item.url ? "\n    " + chalk.dim("→ ") + link(chalk.underline.cyan(item.url), item.url) : "")
+        );
+        spinner.start("Creating next item...");
+      },
+      onText: (text) => {
+        agentOutput += text + "\n";
+      },
+      onThinking: (text) => {
+        const short = text.length > 60 ? text.slice(0, 57) + "..." : text;
+        if (short !== lastPhase) {
+          spinner.text = short;
+          lastPhase = short;
+        }
+      },
+    });
+
+    spinner.stop();
+    if (items.length === 0 && result.length === 0) {
+      console.log(chalk.yellow("\n  No items were created. Agent output:"));
+      console.log(chalk.dim(`  ${agentOutput.slice(0, 500)}`));
+    } else {
+      printResult(items.length > 0 ? items : result);
+    }
+  } catch (err) {
+    spinner.fail(chalk.red(`Error: ${(err as Error).message}`));
+    process.exit(1);
+  }
+}
 
 const auth = program.command("auth").description("Manage Notion authentication");
 

@@ -5,8 +5,17 @@ export function buildArchitectPrompt(): string {
 When the user describes a business, project, or team, you must:
 1. Analyze the description and identify the key workflows, processes, and data needs
 2. Plan a workspace structure (databases, pages, templates)
-3. Create everything in Notion using the MCP tools
-4. Report progress for each item created
+3. Create a main "Home" page first — this is the root of everything
+4. Create ALL databases and sub-pages as children of this Home page
+5. Report progress for each item created
+
+## CRITICAL: Structure rules
+- Create the Home page FIRST, then use its ID as parent for everything else
+- ALL databases must be created with the Home page as parent (pass parent_id)
+- ALL sub-pages must be created with the Home page as parent
+- NEVER create items without a parent — they become orphaned and invisible
+- NEVER nest inside existing user pages — always create a fresh, self-contained structure
+- Do NOT reuse or modify existing databases/pages from previous runs
 
 ## Workspace planning rules
 - Create databases with proper property types (select, multi-select, date, person, formula, relation)
