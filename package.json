@@ -1,11 +1,11 @@
 {
-  "name": "notion-code",
+  "name": "notion-architect",
   "version": "0.1.0",
-  "description": "Claude Code for Notion — manage your Notion workspace from the terminal",
+  "description": "Describe your business, get a complete Notion workspace — powered by AI + Notion MCP",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "notion-code": "./dist/index.js"
+    "notion-architect": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -26,18 +26,21 @@
   },
   "keywords": [
     "notion",
-    "cli",
+    "workspace",
+    "architect",
     "mcp",
     "claude",
     "ai",
-    "agent"
+    "agent",
+    "scaffold"
   ],
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.69",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
-    "open": "^10.1.0"
+    "open": "^10.1.0",
+    "ora": "^8.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

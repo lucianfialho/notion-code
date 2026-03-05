@@ -1,79 +1,89 @@
-import { spawn } from "node:child_process";
-import { buildSystemPrompt } from "./system-prompt.js";
-import type { WorkspaceContext } from "./context/workspace.js";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { buildArchitectPrompt } from "./system-prompt.js";
 
-export interface AgentOptions {
+export interface ArchitectOptions {
   token: string;
-  workspaceName?: string;
-  workspaceContext?: WorkspaceContext;
+  description: string;
+  onItemCreated?: (item: CreatedItem) => void;
+  onThinking?: (text: string) => void;
+  onText?: (text: string) => void;
 }
 
-function buildMcpConfig(token: string): string {
-  return JSON.stringify({
-    mcpServers: {
-      notion: {
-        command: "npx",
-        args: ["-y", "@notionhq/notion-mcp-server"],
-        env: {
-          OPENAPI_MCP_HEADERS: JSON.stringify({
-            Authorization: `Bearer ${token}`,
-            "Notion-Version": "2022-06-28",
-          }),
+export interface CreatedItem {
+  type: "database" | "page" | "template";
+  title: string;
+  url: string;
+}
+
+export async function buildWorkspace(options: ArchitectOptions): Promise<CreatedItem[]> {
+  const { token, description, onItemCreated, onThinking, onText } = options;
+  const items: CreatedItem[] = [];
+
+  const result = query({
+    prompt: `Create a complete Notion workspace for: ${description}`,
+    options: {
+      systemPrompt: buildArchitectPrompt(),
+      model: "sonnet",
+      mcpServers: {
+        notion: {
+          command: "npx",
+          args: ["-y", "@notionhq/notion-mcp-server"],
+          env: {
+            OPENAPI_MCP_HEADERS: JSON.stringify({
+              Authorization: `Bearer ${token}`,
+              "Notion-Version": "2022-06-28",
+            }),
+          },
         },
+      },
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+      env: {
+        ...process.env,
+        CLAUDECODE: undefined,
       },
     },
   });
+
+  for await (const message of result) {
+    if (message.type === "assistant") {
+      const text = extractText(message);
+      if (text) {
+        // Parse CREATED: lines for structured output
+        const lines = text.split("\n");
+        for (const line of lines) {
+          const match = line.match(/^CREATED:(database|page|template):(.+?):(https?:\/\/.+)$/);
+          if (match) {
+            const item: CreatedItem = {
+              type: match[1] as CreatedItem["type"],
+              title: match[2],
+              url: match[3],
+            };
+            items.push(item);
+            onItemCreated?.(item);
+          }
+        }
+        onText?.(text);
+      }
+    } else if (message.type === "tool_use_summary") {
+      onThinking?.(message.summary);
+    }
+  }
+
+  return items;
 }
 
-/**
- * Launch claude CLI in interactive mode with Notion MCP pre-configured.
- * This gives the full Claude Code UX (markdown rendering, tool panels, etc.)
- */
-export function launchInteractive(options: AgentOptions): void {
-  const { token, workspaceName, workspaceContext } = options;
-  const systemPrompt = buildSystemPrompt(workspaceName, workspaceContext);
+function extractText(msg: { type: string; message?: { content?: unknown } }): string | undefined {
+  const betaMsg = (msg as { message?: { content?: unknown } }).message;
+  if (!betaMsg || !("content" in betaMsg)) return undefined;
 
-  const args = [
-    "--system-prompt", systemPrompt,
-    "--mcp-config", buildMcpConfig(token),
-    "--permission-mode", "bypassPermissions",
-    "--allow-dangerously-skip-permissions",
-    "--disallowedTools", "Read,Write,Edit,Bash,Glob,Grep,Agent,WebSearch,WebFetch",
-  ];
-
-  const child = spawn("claude", args, {
-    stdio: "inherit",
-    env: { ...process.env, CLAUDECODE: undefined },
-  });
-
-  child.on("exit", (code) => {
-    process.exit(code ?? 0);
-  });
-}
-
-/**
- * Run a single prompt via claude -p and stream output to stdout.
- */
-export function runPrompt(options: AgentOptions & { prompt: string; outputFormat: string }): void {
-  const { token, workspaceName, workspaceContext, prompt, outputFormat } = options;
-  const systemPrompt = buildSystemPrompt(workspaceName, workspaceContext);
-
-  const args = [
-    "-p", prompt,
-    "--system-prompt", systemPrompt,
-    "--mcp-config", buildMcpConfig(token),
-    "--permission-mode", "bypassPermissions",
-    "--allow-dangerously-skip-permissions",
-    "--disallowedTools", "Read,Write,Edit,Bash,Glob,Grep,Agent,WebSearch,WebFetch",
-    "--output-format", outputFormat,
-  ];
-
-  const child = spawn("claude", args, {
-    stdio: "inherit",
-    env: { ...process.env, CLAUDECODE: undefined },
-  });
-
-  child.on("exit", (code) => {
-    process.exit(code ?? 0);
-  });
+  const content = betaMsg.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return (content as Array<{ type: string; text?: string }>)
+      .filter((block) => block.type === "text")
+      .map((block) => block.text || "")
+      .join("");
+  }
+  return undefined;
 }
