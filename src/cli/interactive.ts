@@ -4,7 +4,7 @@ import chalk from "chalk";
 import { getToken } from "../auth/oauth.js";
 import { getCredentials } from "../auth/store.js";
 import { createNotionAgent } from "../agent.js";
-import { printBanner } from "./ui.js";
+import { printBanner, formatError } from "./ui.js";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
 export async function runInteractiveMode(): Promise<void> {
@@ -58,7 +58,7 @@ export async function runInteractiveMode(): Promise<void> {
     if ((err as Error).message?.includes("interrupted")) {
       // Ctrl+C interrupt, graceful exit
     } else {
-      console.error(chalk.red(`\nError: ${(err as Error).message}`));
+      console.error(chalk.red(`\nError: ${formatError(err)}`));
     }
   } finally {
     rl.close();
