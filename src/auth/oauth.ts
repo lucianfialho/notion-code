@@ -3,8 +3,11 @@ import open from "open";
 import chalk from "chalk";
 import { saveCredentials, getCredentials, type Credentials } from "./store.js";
 
-const CALLBACK_PORT = 3333;
+const CALLBACK_PORT = 1355;
 const REDIRECT_URI = `http://localhost:${CALLBACK_PORT}/callback`;
+
+// OAuth credentials from environment
+// Users must create their own Notion integration at https://www.notion.so/my-integrations
 
 export async function getToken(): Promise<string> {
   // Direct token from env takes priority
@@ -24,15 +27,13 @@ export async function runOAuthFlow(): Promise<Credentials> {
   const clientSecret = process.env.NOTION_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.error(
-      chalk.red("Missing NOTION_CLIENT_ID or NOTION_CLIENT_SECRET environment variables.")
-    );
-    console.error(
-      chalk.dim("Create an integration at https://www.notion.so/my-integrations")
-    );
-    console.error(
-      chalk.dim("Or set NOTION_TOKEN directly for internal integrations.")
-    );
+    console.error(chalk.red("Missing NOTION_CLIENT_ID or NOTION_CLIENT_SECRET."));
+    console.error(chalk.dim("\nSetup:"));
+    console.error(chalk.dim("  1. Create an integration at https://www.notion.so/my-integrations"));
+    console.error(chalk.dim("  2. Set environment variables:"));
+    console.error(chalk.dim("     export NOTION_CLIENT_ID=your_client_id"));
+    console.error(chalk.dim("     export NOTION_CLIENT_SECRET=your_client_secret"));
+    console.error(chalk.dim("\n  Or use a direct token: export NOTION_TOKEN=ntn_xxx"));
     process.exit(1);
   }
 

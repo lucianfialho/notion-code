@@ -34,6 +34,10 @@ export function createNotionAgent(options: AgentOptions): Query {
       maxTurns,
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
+      env: {
+        ...process.env,
+        CLAUDECODE: undefined,
+      },
     },
   });
 }
