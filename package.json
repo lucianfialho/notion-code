@@ -1,0 +1,43 @@
+{
+  "name": "notion-code",
+  "version": "0.1.0",
+  "description": "Claude Code for Notion — manage your Notion workspace from the terminal",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "notion-code": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "notion",
+    "cli",
+    "mcp",
+    "claude",
+    "ai",
+    "agent"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.69",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
