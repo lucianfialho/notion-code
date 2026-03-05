@@ -1,21 +1,23 @@
 import { query, type Query } from "@anthropic-ai/claude-agent-sdk";
 import { buildSystemPrompt } from "./system-prompt.js";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { WorkspaceContext } from "./context/workspace.js";
 
 export interface AgentOptions {
   token: string;
   workspaceName?: string;
+  workspaceContext?: WorkspaceContext;
   prompt: string | AsyncIterable<SDKUserMessage>;
   maxTurns?: number;
 }
 
 export function createNotionAgent(options: AgentOptions): Query {
-  const { token, workspaceName, prompt, maxTurns } = options;
+  const { token, workspaceName, workspaceContext, prompt, maxTurns } = options;
 
   return query({
     prompt,
     options: {
-      systemPrompt: buildSystemPrompt(workspaceName),
+      systemPrompt: buildSystemPrompt(workspaceName, workspaceContext),
       model: "sonnet",
       mcpServers: {
         notion: {

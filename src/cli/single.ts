@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { getToken } from "../auth/oauth.js";
 import { getCredentials } from "../auth/store.js";
 import { createNotionAgent } from "../agent.js";
+import { getCachedContext } from "../context/workspace.js";
 import type { OutputFormat } from "./args.js";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
@@ -11,10 +12,12 @@ export async function runSinglePrompt(
 ): Promise<void> {
   const token = await getToken();
   const creds = await getCredentials();
+  const context = await getCachedContext();
 
   const agent = createNotionAgent({
     token,
     workspaceName: creds?.workspace_name,
+    workspaceContext: context ?? undefined,
     prompt,
   });
 

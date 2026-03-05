@@ -5,6 +5,7 @@ import { getToken } from "../auth/oauth.js";
 import { getCredentials } from "../auth/store.js";
 import { createNotionAgent } from "../agent.js";
 import { printBanner, formatError } from "./ui.js";
+import { getCachedContext, indexWorkspace } from "../context/workspace.js";
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
 export async function runInteractiveMode(): Promise<void> {
@@ -12,6 +13,16 @@ export async function runInteractiveMode(): Promise<void> {
   const creds = await getCredentials();
 
   printBanner(creds?.workspace_name);
+
+  // Load or build workspace context
+  let context = await getCachedContext();
+  if (!context && creds) {
+    try {
+      context = await indexWorkspace(token, creds.workspace_name);
+    } catch {
+      // Non-fatal, agent works without context
+    }
+  }
 
   const rl = readline.createInterface({ input: stdin, output: stdout });
 
@@ -47,6 +58,7 @@ export async function runInteractiveMode(): Promise<void> {
   const agent = createNotionAgent({
     token,
     workspaceName: creds?.workspace_name,
+    workspaceContext: context ?? undefined,
     prompt: userMessages(),
   });
 
